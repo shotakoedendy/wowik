@@ -907,3 +907,16 @@ const Engine = (function () {
 if (typeof window !== 'undefined') {
 	window['Engine'] = Engine;
 }
+/* VOVIK_LEGACY_CACHE_BRIDGE_V2 */
+// A cached old HTML page can still receive the updated, cache-busted index.js.
+// Bring it to fresh HTML once; keep the guard in the URL to avoid reload loops.
+(function () {
+  if (typeof window === 'undefined' || window.__vovikFreshPage) return;
+  const url = new URL('index.html', location.href);
+  const current = new URL(location.href);
+  if (current.searchParams.has('_vovik_bridge')) return;
+  url.search = current.search;
+  url.hash = current.hash;
+  url.searchParams.set('_vovik_bridge', Date.now().toString());
+  location.replace(url.href);
+}());
