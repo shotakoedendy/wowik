@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>ВОВИК</title>
-<meta name="vovik-version" content="0.35.2-dev">
+<meta name="vovik-version" content="0.40.1-dev">
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#102022;color:#eee;font:16px sans-serif}
 canvas{display:block;width:100%;height:100%;outline:none}
@@ -25,7 +25,7 @@ canvas{display:block;width:100%;height:100%;outline:none}
 <script>
 'use strict';
 
-const config = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":30070460,"index.wasm":37900721},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const config = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":33100932,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
 const engineScriptUrl = 'index.js';
 const splashUrl = 'index.png';
 const canvas = document.getElementById('canvas');
@@ -59,42 +59,10 @@ async function unregisterLegacyGodotWorker() {
 }
 
 async function currentRelease() {
-  // Direct Godot exports have no manifest. Version discovery is optional;
-  // failure must never prevent an otherwise valid game from starting.
-  const fallback = Date.now().toString();
-  try {
-    const url = new URL('current.json', location.href);
-    url.searchParams.set('_', fallback);
-    const response = await nativeFetch(url, {cache: 'no-store', signal: AbortSignal.timeout(2000)});
-    if (!response.ok) return fallback;
-    const release = await response.json();
-    if (!/^wowik-[a-z0-9.-]+\.html$/.test(release.entry) || !/^[a-f0-9]{64}$/.test(release.build)) return fallback;
-    // A leftover manifest must not downgrade a freshly exported standalone page.
-    const own = document.querySelector('meta[name="vovik-version"]').content.match(/^(\d+)\.(\d+)\.(\d+)/);
-    const incoming = String(release.version || '').match(/^(\d+)\.(\d+)\.(\d+)/);
-    if (!incoming) return fallback;
-    for (let i = 1; i <= 3; i++) {
-      if (Number(incoming[i]) < Number(own[i])) return fallback;
-      if (Number(incoming[i]) > Number(own[i])) break;
-    }
-    const target = new URL(release.entry, location.href);
-    target.search = location.search;
-    target.searchParams.set('v', release.build);
-    target.hash = location.hash;
-    if (target.pathname !== location.pathname || target.search !== location.search) {
-      // During a partial upload the manifest may appear before its HTML.
-      // Check the target instead of redirecting into a 404 or redirect loop.
-      const page = await nativeFetch(target, {cache: 'no-store', signal: AbortSignal.timeout(2000)});
-      if (!page.ok) return fallback;
-      const html = await page.text();
-      if (!html.includes('const config = ') || !html.includes('async function boot()')) return fallback;
-      location.replace(target.href);
-      return null;
-    }
-    return release.build;
-  } catch (_) {
-    return fallback;
-  }
+  // Stable index.* filenames: no manifests, versioned pages or redirects.
+  // A fresh loader request plus no-store PCK/WASM fetches prevents stale games.
+  const version = document.querySelector('meta[name="vovik-version"]').content;
+  return version + '-' + Date.now().toString();
 }
 
 function loadEngineScript(token) {
