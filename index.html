@@ -7,8 +7,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>ВОВИК</title>
-<meta name="vovik-version" content="0.40.2-dev">
-<meta name="vovik-build" content="0310692d506412405c6113ecde99c005f31a22020044d3856890e10fd0d8cecc">
+<meta name="vovik-version" content="0.45.1-dev">
+<meta name="vovik-build" content="d6898279923d80060b55028641389af5045a82b30ce66cab04b75fb754bc5403">
 <meta name="vovik-loader" content="2">
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#102022;color:#eee;font:16px sans-serif}
@@ -27,7 +27,7 @@ canvas{display:block;width:100%;height:100%;outline:none}
 <script>
 'use strict';
 
-const config = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":33100932,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const config = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":39002296,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
 const engineScriptUrl = 'index.js';
 const splashUrl = 'index.png';
 const canvas = document.getElementById('canvas');
@@ -36,7 +36,7 @@ const status = document.getElementById('status');
 const splash = document.getElementById('splash');
 
 // Filled by package_web.py from the exact exported files. No extra manifest.
-const assetHashes = {"index.apple-touch-icon.png":"sha256-LqWK+xn55zaB/CYpuKtXTsI8pIxuvB8SPjQKAMpx/Oc=","index.audio.position.worklet.js":"sha256-vjOYW8cWDWv5ZG8lnNhrJZzWewLMspfuXET4rIQye8g=","index.audio.worklet.js":"sha256-W0dqnJzmQsDuQlZDbRvDHZw4+GisoPmo4qV8GNLewqM=","index.icon.png":"sha256-4r7FEi2HAKSK5Tpk//LfUwU9JcJY9dwnC/LIMRt9ovk=","index.js":"sha256-21tuesqZzb4CTtcFVfc/8qI7gOPhfoUeA5py/XIRpzc=","index.pck":"sha256-wUD1JULLOKN1cqYegWmZrGRnITD5zKeBy3CwxQtNTOU=","index.png":"sha256-f6zPUNYnqNzDYJdPFp2ASvMsNkuhf2vVHOdpx8AmJVE=","index.wasm":"sha256-/HRnnjuX92h4lH/NT74SaMv6YYgYKi4zu8P13Jv6V9A="};
+const assetHashes = {"index.apple-touch-icon.png":"sha256-LqWK+xn55zaB/CYpuKtXTsI8pIxuvB8SPjQKAMpx/Oc=","index.audio.position.worklet.js":"sha256-vjOYW8cWDWv5ZG8lnNhrJZzWewLMspfuXET4rIQye8g=","index.audio.worklet.js":"sha256-W0dqnJzmQsDuQlZDbRvDHZw4+GisoPmo4qV8GNLewqM=","index.icon.png":"sha256-4r7FEi2HAKSK5Tpk//LfUwU9JcJY9dwnC/LIMRt9ovk=","index.js":"sha256-21tuesqZzb4CTtcFVfc/8qI7gOPhfoUeA5py/XIRpzc=","index.pck":"sha256-RHlaS6nJZeIo2hhfwB7BAcMaa26ziiu65Hp2+nti/v0=","index.png":"sha256-f6zPUNYnqNzDYJdPFp2ASvMsNkuhf2vVHOdpx8AmJVE=","index.wasm":"sha256-/HRnnjuX92h4lH/NT74SaMv6YYgYKi4zu8P13Jv6V9A="};
 const nativeFetch = window.fetch.bind(window);
 const ownUrl = new URL(location.href);
 const sessionToken = Date.now().toString() + '-' + Math.random().toString(36).slice(2);
