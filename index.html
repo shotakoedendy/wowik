@@ -7,7 +7,9 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>ВОВИК</title>
-<meta name="vovik-version" content="0.24.3-dev">
+<meta name="vovik-version" content="0.45.0-dev">
+<meta name="vovik-build" content="a76e170a489e5231d83231217c98437ed7410605acc024b3be34ba2ae574ea3b">
+<meta name="vovik-loader" content="2">
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#102022;color:#eee;font:16px sans-serif}
 canvas{display:block;width:100%;height:100%;outline:none}
@@ -25,7 +27,7 @@ canvas{display:block;width:100%;height:100%;outline:none}
 <script>
 'use strict';
 
-const config = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":28910084,"index.wasm":37900721},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const config = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":39002296,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
 const engineScriptUrl = 'index.js';
 const splashUrl = 'index.png';
 const canvas = document.getElementById('canvas');
@@ -33,74 +35,107 @@ const loading = document.getElementById('loading');
 const status = document.getElementById('status');
 const splash = document.getElementById('splash');
 
-// Permanent cache-busting layer for GitHub Pages and other static hosts.
-// The PCK contains the actual game scripts/resources, so it must never come
-// from a previous release's HTTP cache.
+// Filled by package_web.py from the exact exported files. No extra manifest.
+const assetHashes = {"index.apple-touch-icon.png":"sha256-LqWK+xn55zaB/CYpuKtXTsI8pIxuvB8SPjQKAMpx/Oc=","index.audio.position.worklet.js":"sha256-vjOYW8cWDWv5ZG8lnNhrJZzWewLMspfuXET4rIQye8g=","index.audio.worklet.js":"sha256-W0dqnJzmQsDuQlZDbRvDHZw4+GisoPmo4qV8GNLewqM=","index.icon.png":"sha256-4r7FEi2HAKSK5Tpk//LfUwU9JcJY9dwnC/LIMRt9ovk=","index.js":"sha256-21tuesqZzb4CTtcFVfc/8qI7gOPhfoUeA5py/XIRpzc=","index.pck":"sha256-E2xNSXRy+2uu2ulykbNbpuzw3STnklD/2L7YWuUD5cs=","index.png":"sha256-f6zPUNYnqNzDYJdPFp2ASvMsNkuhf2vVHOdpx8AmJVE=","index.wasm":"sha256-/HRnnjuX92h4lH/NT74SaMv6YYgYKi4zu8P13Jv6V9A="};
 const nativeFetch = window.fetch.bind(window);
+const ownUrl = new URL(location.href);
+const sessionToken = Date.now().toString() + '-' + Math.random().toString(36).slice(2);
+function resourceUrl(path, token = sessionToken) {
+  const url = new URL(path, ownUrl);
+  url.searchParams.set('_vovik', token);
+  return url.href;
+}
 window.fetch = (input, init = {}) => {
-  const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
-  if (/\.(?:pck|wasm)(?:\?|$)/i.test(url)) {
-    return nativeFetch(input, Object.assign({}, init, {cache: 'no-store'}));
+  const source = typeof input === 'string' ? input : (input instanceof URL ? input.href : input.url);
+  const url = new URL(source, ownUrl);
+  const name = url.pathname.split('/').pop();
+  if (url.origin === ownUrl.origin && /\.(?:pck|wasm)$/i.test(name)) {
+    const fresh = resourceUrl(url.href);
+    const request = typeof input === 'string' || input instanceof URL ? fresh : new Request(fresh, input);
+    const options = Object.assign({}, init, {cache: 'no-store'});
+    if (assetHashes[name]) options.integrity = assetHashes[name];
+    return nativeFetch(request, options);
   }
   return nativeFetch(input, init);
 };
 
-async function unregisterLegacyGodotWorker() {
-  if (!('serviceWorker' in navigator) || !navigator.serviceWorker.getRegistrations) return;
-  try {
-    const base = new URL('.', location.href).href;
-    const registrations = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(registrations
-      .filter(reg => reg.scope.startsWith(base))
-      .map(reg => reg.unregister()));
-  } catch (_) {
-    // Never block startup only because an obsolete worker could not be removed.
+function freshNavigation(expected = '') {
+  const url = new URL('index.html', ownUrl);
+  url.search = ownUrl.search;
+  url.hash = ownUrl.hash;
+  url.searchParams.delete('_vovik_check');
+  url.searchParams.set('_vovik_reload', sessionToken);
+  if (expected) url.searchParams.set('_vovik_expected', expected);
+  else url.searchParams.delete('_vovik_expected');
+  location.replace(url.href);
+}
+// Registered before Godot: the canvas cannot consume the reload shortcut.
+window.addEventListener('keydown', event => {
+  if (event.key === 'F5' || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'r')) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    freshNavigation();
   }
+}, true);
+
+async function unregisterLegacyGodotWorker() {
+  if (!('serviceWorker' in navigator) || !navigator.serviceWorker.getRegistrations) return false;
+  try {
+    const base = new URL('.', ownUrl).href;
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    const results = await Promise.all(registrations.filter(reg => reg.scope.startsWith(base)).map(reg => reg.unregister()));
+    const controller = navigator.serviceWorker.controller;
+    // Unregistering does not detach an already controlled document: navigate once.
+    return results.some(Boolean) && controller && controller.scriptURL && controller.scriptURL.startsWith(base);
+  } catch (_) { return false; }
 }
 
-async function currentRelease() {
-  // Direct Godot exports have no manifest. Version discovery is optional;
-  // failure must never prevent an otherwise valid game from starting.
-  const fallback = Date.now().toString();
-  try {
-    const url = new URL('current.json', location.href);
-    url.searchParams.set('_', fallback);
-    const response = await nativeFetch(url, {cache: 'no-store', signal: AbortSignal.timeout(2000)});
-    if (!response.ok) return fallback;
-    const release = await response.json();
-    if (!/^wowik-[a-z0-9.-]+\.html$/.test(release.entry) || !/^[a-f0-9]{64}$/.test(release.build)) return fallback;
-    // A leftover manifest must not downgrade a freshly exported standalone page.
-    const own = document.querySelector('meta[name="vovik-version"]').content.match(/^(\d+)\.(\d+)\.(\d+)/);
-    const incoming = String(release.version || '').match(/^(\d+)\.(\d+)\.(\d+)/);
-    if (!incoming) return fallback;
-    for (let i = 1; i <= 3; i++) {
-      if (Number(incoming[i]) < Number(own[i])) return fallback;
-      if (Number(incoming[i]) > Number(own[i])) break;
-    }
-    const target = new URL(release.entry, location.href);
-    target.search = location.search;
-    target.searchParams.set('v', release.build);
-    target.hash = location.hash;
-    if (target.pathname !== location.pathname || target.search !== location.search) {
-      // During a partial upload the manifest may appear before its HTML.
-      // Check the target instead of redirecting into a 404 or redirect loop.
-      const page = await nativeFetch(target, {cache: 'no-store', signal: AbortSignal.timeout(2000)});
-      if (!page.ok) return fallback;
-      const html = await page.text();
-      if (!html.includes('const config = ') || !html.includes('async function boot()')) return fallback;
-      location.replace(target.href);
-      return null;
-    }
-    return release.build;
-  } catch (_) {
-    return fallback;
+function pageMeta(html, name) {
+  const tag = html.match(new RegExp('<meta\\s+name=["\']' + name + '["\']\\s+content=["\']([^"\']+)["\']', 'i'));
+  return tag ? tag[1] : '';
+}
+function isOlder(incoming, current) {
+  const a = incoming.match(/^(\d+)\.(\d+)\.(\d+)/);
+  const b = current.match(/^(\d+)\.(\d+)\.(\d+)/);
+  if (!a || !b) return true;
+  for (let i = 1; i <= 3; i++) {
+    if (+a[i] !== +b[i]) return +a[i] < +b[i];
   }
+  return false;
+}
+async function currentRelease() {
+  const version = document.querySelector('meta[name="vovik-version"]').content;
+  const build = document.querySelector('meta[name="vovik-build"]').content;
+  try {
+    const url = new URL('index.html', ownUrl);
+    url.searchParams.set('_vovik_check', sessionToken);
+    const response = await nativeFetch(url.href, {cache: 'no-store', signal: AbortSignal.timeout(4000)});
+    if (response.ok) {
+      const html = await response.text();
+      const incoming = pageMeta(html, 'vovik-build');
+      const incomingVersion = pageMeta(html, 'vovik-version');
+      if (/^[a-f0-9]{64}$/.test(incoming) && html.includes('const config = ') && !isOlder(incomingVersion, version) && incoming !== build) {
+        if (ownUrl.searchParams.get('_vovik_expected') === incoming) {
+          throw new Error('Обновление ещё публикуется. Откройте игру немного позже.');
+        }
+        freshNavigation(incoming);
+        return null;
+      }
+    }
+  } catch (error) {
+    // Network/404/timeout must not strand a valid standalone export.
+    // A repeated inconsistent deployment must never create a redirect loop.
+    if (String(error.message).includes('Обновление ещё публикуется')) throw error;
+  }
+  window.__vovikFreshPage = true;
+  return version + '-' + build + '-' + sessionToken;
 }
 
 function loadEngineScript(token) {
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = engineScriptUrl + '?v=' + encodeURIComponent(token);
+    script.src = resourceUrl(engineScriptUrl, token);
+    if (assetHashes[engineScriptUrl]) { script.integrity = assetHashes[engineScriptUrl]; script.crossOrigin = 'anonymous'; }
     script.onload = resolve;
     script.onerror = () => reject(new Error('Не удалось загрузить Web-движок Godot'));
     document.head.appendChild(script);
@@ -108,10 +143,13 @@ function loadEngineScript(token) {
 }
 
 async function boot() {
-  await unregisterLegacyGodotWorker();
+  const controlled = await unregisterLegacyGodotWorker();
+  if (controlled && !ownUrl.searchParams.has('_vovik_sw')) {
+    ownUrl.searchParams.set('_vovik_sw', '1'); freshNavigation(); return;
+  }
   const token = await currentRelease();
   if (!token) return;
-  splash.src = splashUrl + '?v=' + encodeURIComponent(token);
+  splash.src = resourceUrl(splashUrl, token);
   await loadEngineScript(token);
 
   const engine = new Engine(config);
@@ -137,6 +175,4 @@ canvas.addEventListener('pointerdown', () => canvas.focus());
 </script>
 </body>
 </html>
-
-
 
