@@ -1,0 +1,61 @@
+name: Safe CI storage cleanup
+on:
+  push:
+    branches: [maintenance/storage-20261124]
+    paths: [.github/workflows/storage-cleanup-20261124.yml]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: storage-cleanup-20261124
+  cancel-in-progress: false
+jobs:
+  cleanup:
+    if: github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'maintenance/storage-20261124')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const now = Date.now();
+            const age = 14 * 86400000;
+            const artifacts = (await github.paginate(github.rest.actions.listArtifactsForRepo, {owner,repo,per_page:100})).filter(a=>!a.expired);
+            const groups = new Map();
+            for (const a of artifacts) {
+              if (!/^(Vovik-|Holiday-|holiday-search-log$)|-Preview$/i.test(a.name)) continue;
+              if (!groups.has(a.name)) groups.set(a.name,[]);
+              groups.get(a.name).push(a);
+            }
+            const stale = [];
+            for (const items of groups.values()) {
+              items.sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at));
+              // Keep two most recent per exact name and all artifacts from the last 14 days.
+              for (const a of items.slice(2)) if (now-Date.parse(a.created_at)>age) stale.push(a);
+            }
+            const cachePages = await github.paginate(github.rest.actions.getActionsCacheList,{owner,repo,per_page:100});
+            const caches = cachePages.flatMap(x=>x.actions_caches || (x.id ? [x] : []));
+            const oldCaches = caches.filter(c=>now-Date.parse(c.last_accessed_at)>age);
+            let bytes=0,deleted=0,cacheBytes=0,cacheDeleted=0,errors=0;
+            for (const a of stale) {
+              try {
+                await github.rest.actions.deleteArtifact({owner,repo,artifact_id:a.id});
+                bytes+=a.size_in_bytes;deleted++;
+                core.info('Deleted obsolete artifact '+a.id+' '+a.name+' '+a.size_in_bytes);
+              } catch(e) {if(e.status!==404){errors++;core.warning(e.message)}}
+            }
+            for (const c of oldCaches) {
+              try {
+                await github.rest.actions.deleteActionsCacheById({owner,repo,cache_id:c.id});
+                cacheBytes+=c.size_in_bytes;cacheDeleted++;
+                core.info('Deleted inactive cache '+c.id+' '+c.size_in_bytes);
+              } catch(e) {if(e.status!==404){errors++;core.warning(e.message)}}
+            }
+            const msg='STORAGE_CLEANUP_RESULT '+JSON.stringify({activeArtifacts:artifacts.length,artifactDeleted:deleted,artifactBytes:bytes,cacheCount:caches.length,cacheDeleted,cacheBytes,errors});
+            core.info(msg);
+            await core.summary.addHeading('CI storage cleanup').addRaw(msg).addRaw('\nSource, Git history, branches, Releases and deployments untouched. All unique and recent builds preserved.').write();
+            if(errors) core.setFailed('Some cleanup requests failed');
