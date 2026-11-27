@@ -8,9 +8,9 @@
 <meta http-equiv="Expires" content="0">
 <title>ВОВИК — Кассетам своё место!</title>
 <meta name="description" content="Хуторская головоломка: спасай кассеты, раскрывай секреты и собирай архив. Игра для клавиатуры в браузере.">
-<meta name="vovik-version" content="1.0.12">
+<meta name="vovik-version" content="1.0.13">
 <meta name="vovik-records-url" content="">
-<meta name="vovik-build" content="4dc449b136df98593d290ffcd916ce01044600ba7802bc48dcab16105d0cd686">
+<meta name="vovik-build" content="6f3b0cbbfab39d320ed8a528340abf2e8f65dcd2fd3a634cc518da87a6ab8db6">
 <meta name="vovik-loader" content="2">
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#102022;color:#eee;font:16px sans-serif}
@@ -29,7 +29,7 @@ canvas{display:block;width:100%;height:100%;outline:none}
 <script>
 'use strict';
 
-const config = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":47827576,"index.wasm":39513091},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const config = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":47827528,"index.wasm":39513091},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
 const engineScriptUrl = 'index.js';
 const splashUrl = 'index.png';
 const canvas = document.getElementById('canvas');
@@ -38,7 +38,7 @@ const status = document.getElementById('status');
 const splash = document.getElementById('splash');
 
 // Filled by package_web.py from the exact exported files. No extra manifest.
-const assetHashes = {"index.apple-touch-icon.png":"sha256-LqWK+xn55zaB/CYpuKtXTsI8pIxuvB8SPjQKAMpx/Oc=","index.audio.position.worklet.js":"sha256-vjOYW8cWDWv5ZG8lnNhrJZzWewLMspfuXET4rIQye8g=","index.audio.worklet.js":"sha256-W0dqnJzmQsDuQlZDbRvDHZw4+GisoPmo4qV8GNLewqM=","index.icon.png":"sha256-4r7FEi2HAKSK5Tpk//LfUwU9JcJY9dwnC/LIMRt9ovk=","index.js":"sha256-mnQScChVvh9YAC6LPQjsdS6c7vTdZ61EIu3/K2pyHbQ=","index.pck":"sha256-9Su5dNW+cx2rTGzWYim9I+eEX3JLubmDwlr6rF7yEQI=","index.png":"sha256-izbcvd2yN/ce6B69awx+ATyKiYOYQCJgBYp7EHXpEzA=","index.wasm":"sha256-NRFvaFQKxBrPfXHqRXrd7ZG16WCpzKPirMcpGOrwEnc="};
+const assetHashes = {"index.apple-touch-icon.png":"sha256-LqWK+xn55zaB/CYpuKtXTsI8pIxuvB8SPjQKAMpx/Oc=","index.audio.position.worklet.js":"sha256-vjOYW8cWDWv5ZG8lnNhrJZzWewLMspfuXET4rIQye8g=","index.audio.worklet.js":"sha256-W0dqnJzmQsDuQlZDbRvDHZw4+GisoPmo4qV8GNLewqM=","index.icon.png":"sha256-4r7FEi2HAKSK5Tpk//LfUwU9JcJY9dwnC/LIMRt9ovk=","index.js":"sha256-mnQScChVvh9YAC6LPQjsdS6c7vTdZ61EIu3/K2pyHbQ=","index.pck":"sha256-qGhnL37jlRRnWakyOSaH91cek7KS2rCu+Y8DHnl5a9s=","index.png":"sha256-izbcvd2yN/ce6B69awx+ATyKiYOYQCJgBYp7EHXpEzA=","index.wasm":"sha256-NRFvaFQKxBrPfXHqRXrd7ZG16WCpzKPirMcpGOrwEnc="};
 const nativeFetch = window.fetch.bind(window);
 const ownUrl = new URL(location.href);
 const sessionToken = Date.now().toString() + '-' + Math.random().toString(36).slice(2);
